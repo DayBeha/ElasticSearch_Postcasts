@@ -56,7 +56,7 @@ configurations = {
             'startTime': {'type': 'double'},  # in second
             'endTime': {'type': 'double'},
             'totalTime': {'type': 'double'},
-            'id': {'type': 'int'} # id of the transcript in this episode, ranged from 0 to total - 1, sort according to time order
+            'id': {'type': 'integer'} # id of the transcript in this episode, ranged from 0 to total - 1, sort according to time order
         }
     }
 }
