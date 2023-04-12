@@ -8,8 +8,9 @@ from elasticsearch import Elasticsearch
 from es_client import ESClient
 
 
-META_PATH = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\spotify-podcasts-2020\metadata.tsv"
-TRANS_ROOT = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\spotify-podcasts-2020\podcasts-transcripts"
+# Change them to your own working paths if needed
+META_PATH = '../Project/podcasts-no-audio-13GB/metadata.tsv'
+TRANS_ROOT = '../Project/podcasts-no-audio-13GB/spotify-podcasts-2020/podcasts-transcripts'
 
 # Define mapping
 configurations = {
@@ -54,7 +55,8 @@ configurations = {
             'transcript': {'type': 'text'},
             'startTime': {'type': 'double'},  # in second
             'endTime': {'type': 'double'},
-            'totalTime': {'type': 'double'}
+            'totalTime': {'type': 'double'},
+            'id': {'type': 'int'} # id of the transcript in this episode, ranged from 0 to total - 1, sort according to time order
         }
     }
 }

@@ -43,7 +43,7 @@ class ESClient:
                         'publisher': row["publisher"],
                         'episode_name': row["episode_name"],
                         'episode_description': row["episode_description"],
-                        'duration': float(row["duration"])
+                        'duration': float(row["duration"]),
                     }
                 }
                 yield doc
@@ -53,6 +53,7 @@ class ESClient:
         trans_files = trans_root.glob('**/*.json')
         for child in tqdm(trans_files):
             transcript_obj = json.load(open(child))
+            i = 0
             for chunk in transcript_obj["results"]:
                 data = chunk["alternatives"][0]
                 if "transcript" in data and "words" in data:
@@ -67,9 +68,11 @@ class ESClient:
                             'transcript': data["transcript"],
                             'startTime': startTime,
                             'endTime': endTime,
-                            'totalTime': totalTime
+                            'totalTime': totalTime,
+                            'id': int(i)
                         }
                     }
+                    i += 1
                     yield doc
 
     def index_meta(self, META_PATH):
