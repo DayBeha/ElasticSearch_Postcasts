@@ -81,8 +81,6 @@ class ESClient:
     def index_trans(self, TRANS_ROOT):
         bulk(client=self.es_client, actions=self.generate_trans(TRANS_ROOT))
 
-
-
     ##############################  not used for now  ##############################
     def get_index_mappings(self, index_name):
         return self.es_client.indices.get_mapping(index=index_name)
@@ -122,4 +120,3 @@ class ESClient:
 
     def insert_data(self, index_name, data):
         self.es_client.index(index=index_name, body=data)
-

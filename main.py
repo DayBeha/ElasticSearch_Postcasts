@@ -7,10 +7,8 @@ from timeit import default_timer as timer
 from elasticsearch import Elasticsearch
 from es_client import ESClient
 
-
-# Change them to your own working paths if needed
-META_PATH = '../Project/podcasts-no-audio-13GB/metadata.tsv'
-TRANS_ROOT = '../Project/podcasts-no-audio-13GB/spotify-podcasts-2020/podcasts-transcripts'
+META_PATH = r"G:\podcasts-no-audio-13GB\metadata.tsv"
+TRANS_ROOT = r"G:\podcasts-no-audio-13GB\podcasts-transcripts"
 
 # Define mapping
 configurations = {
@@ -55,12 +53,10 @@ configurations = {
             'transcript': {'type': 'text'},
             'startTime': {'type': 'double'},  # in second
             'endTime': {'type': 'double'},
-            'totalTime': {'type': 'double'},
-            'id': {'type': 'integer'} # id of the transcript in this episode, ranged from 0 to total - 1, sort according to time order
+            'totalTime': {'type': 'double'}
         }
     }
 }
-
 
 # Define search query
 search_query = {
@@ -98,7 +94,7 @@ if __name__ == "__main__":
         es.create_index(index_name='episodes', mappings=configurations['ep_mappings'])
         # Index documents
         print("Indexing metadata...")
-        es.index_meta(META_PATH)    # Index metadata
+        es.index_meta(META_PATH)  # Index metadata
 
         # check if index exists
         if es.es_client.indices.exists(index='transcripts'):
@@ -108,10 +104,7 @@ if __name__ == "__main__":
         # create index named 'transcripts' according to mappings
         es.create_index(index_name='transcripts', mappings=configurations['tr_mappings'])
         print("Indexing transcripts...")
-        es.index_trans(TRANS_ROOT)   # Index transcripts
-
-
-
+        es.index_trans(TRANS_ROOT)  # Index transcripts
 
     ######################
     # Execute search query
