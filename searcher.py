@@ -34,12 +34,18 @@ QUERY = {
 
 class Searcher:
     def __init__(self, es: Elasticsearch, n_minute=2, size=100):
+        # Elasticsearch
         self.es = es
         self.transcript_dict = None
+        # 由用户输入的，需要返回的n-minutes片段
         self.n_minute = n_minute
+        # 第1次对transcripts进行搜索的结果数目
         self.raw_search_size = 100
+        # 第2次对episodes进行搜索的结果数目
         self.max_search_size = 10000
+        # 进行clip拼接时缓存的（一半）长度
         self.half_cache_number = 100
+        # 最终返回的结果数目
         self.final_size = size
 
     def search(self, query: dict) -> list:
@@ -70,6 +76,7 @@ class Searcher:
         return res
 
     def modify_score(self, episodes_score):
+        """将每段transcript的原始得分与其对应的episodes的得分进行加权"""
         if not episodes_score:
             return
 
@@ -81,6 +88,7 @@ class Searcher:
 
     @staticmethod
     def update_query(prefix, query):
+        """根据用户提供的原始query，构造在episodes上进行查询时的query"""
         if "episode_description" not in QUERY["bool"]["should"][0]["match"]:
             # modify match name
             for t in QUERY["bool"]["should"]:
@@ -94,6 +102,7 @@ class Searcher:
         query["bool"]["filter"]["bool"]["should"].append(entry)
 
     def update_transcript_dict(self, raw_transcripts):
+        """更新transcript_dict"""
         self.transcript_dict = TranscriptDict()
 
         for trans_json in raw_transcripts:
@@ -118,6 +127,7 @@ class Searcher:
         #     self.transcript_dict.add_new_list(transcript=trans_obj, retrieved_trans=all_in_this_ep)
 
     def combine_clips(self, modified_transcripts) -> list:
+        """对最终结果的每一个transcript，构造出n-minutes的片段"""
         # TODO: 搜索每一个transcript前后的部分，凑够n-minutes
         res = []
         total_sec = 60 * self.n_minute
@@ -154,6 +164,7 @@ class Searcher:
         return res
 
     def front_back_search(self, deque, trans, combine_cache, total_sec) -> collections.deque:
+        """为某一个transcript构造n-minutes片段"""
         deque.append(trans)
         cur_sec = trans.get_total_time()
         base_pos = trans.get_id() - combine_cache[0].get_id()
