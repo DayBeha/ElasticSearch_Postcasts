@@ -3,11 +3,19 @@ from elasticsearch import Elasticsearch
 from transcript import Transcript
 from transcript_dict import TranscriptDict
 
+# QUERY = {
+#     "bool": {
+#         "should": [
+#             {"match": {"transcript": "Higgs"}},
+#             {"match": {"transcript": "Boson"}},
+#         ],
+#     }
+# }
+
 QUERY = {
     "bool": {
         "should": [
-            {"match": {"transcript": "Higgs"}},
-            {"match": {"transcript": "Boson"}},
+            {"match": {"transcript": "terrorism"}},
         ],
     }
 }
@@ -47,6 +55,8 @@ class Searcher:
         self.half_cache_number = 100
         # 最终返回的结果数目
         self.final_size = size
+        # TODO: 找到最好的权重
+        self.EPISODE_WEIGHT = 1.5
 
     def search(self, query: dict) -> list:
         # search raw transcripts
@@ -84,7 +94,7 @@ class Searcher:
             prefix = episodes_json['_source']['episode_filename_prefix']
             ep_score = episodes_json['_score']
             for transcript in self.transcript_dict.transcript_dict[prefix]:
-                transcript.add_score(ep_score)  # TODO:可以修改具体的分数加权方式
+                transcript.add_score(ep_score, self.EPISODE_WEIGHT)  
 
     @staticmethod
     def update_query(prefix, query):
@@ -108,23 +118,6 @@ class Searcher:
         for trans_json in raw_transcripts:
             trans_obj = Transcript(json_obj=trans_json)
             self.transcript_dict.add_new_list_simple(transcript=trans_obj)
-
-        # for trans_json in raw_transcripts:
-        #     trans_obj = Transcript(json_obj=trans_json)
-        #     # get retrieved_trans
-        #     all_in_this_ep = self.es.search(
-        #         index='transcripts',
-        #         query={
-        #             "bool": {
-        #                 "should": [
-        #                     {"match": {"episode_filename_prefix": trans_obj.get_episode_filename_prefix()}}
-        #                 ]
-        #             }
-        #         },
-        #         size=-1
-        #     )
-        #     all_in_this_ep = all_in_this_ep['hits']['hits']
-        #     self.transcript_dict.add_new_list(transcript=trans_obj, retrieved_trans=all_in_this_ep)
 
     def combine_clips(self, modified_transcripts) -> list:
         """对最终结果的每一个transcript，构造出n-minutes的片段"""

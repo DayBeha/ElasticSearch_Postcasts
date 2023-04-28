@@ -9,9 +9,10 @@ from PyQt6.QtWidgets import QApplication
 
 from es_client import ESClient
 from GUI import MyWidget
+from searcher import Searcher
 
-META_PATH = r"G:\podcasts-no-audio-13GB\metadata.tsv"
-TRANS_ROOT = r"G:\podcasts-no-audio-13GB\podcasts-transcripts"
+META_PATH = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\metadata.tsv"
+TRANS_ROOT = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\podcasts-transcripts"
 
 # Define mapping
 configurations = {
@@ -107,20 +108,17 @@ if __name__ == "__main__":
         # create index named 'transcripts' according to mappings
         es.create_index(index_name='transcripts', mappings=configurations['tr_mappings'])
         print("Indexing transcripts...")
-<<<<<<< HEAD
-        es.index_trans(TRANS_ROOT)  # Index transcripts
-=======
-        es.index_trans(TRANS_ROOT)   # Index transcripts
 
->>>>>>> origin
+        es.index_trans(TRANS_ROOT)  # Index transcripts
+
 
     ######################
     # Execute search query
     ######################
     if args.mode == 'search':
         app = QApplication(sys.argv)
-
-        search_engine = None  # TODO 这里要创建SeacherEngine对象
+        search_engine = Searcher(es.es_client)
         w = MyWidget(search_engine)
         sys.exit(app.exec())
+
 
