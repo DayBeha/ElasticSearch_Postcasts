@@ -65,7 +65,7 @@ class TranscriptDict():
 
     def get_sorted_results(self):
         merged_list = [transcript for t_list in self.transcript_dict.values() for transcript in t_list]
-        sorted_list = sorted(merged_list, key=lambda transcript: transcript.score)
+        sorted_list = sorted(merged_list, key=lambda transcript: transcript.score, reverse=True)
 
         return sorted_list
 

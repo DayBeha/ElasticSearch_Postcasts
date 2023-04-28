@@ -59,12 +59,12 @@ class Searcher:
         self.update_transcript_dict(raw_transcripts)
 
         # search in episodes
-        new_query = QUERY.copy()
+        episodes_query = QUERY.copy()
         for prefix in self.transcript_dict.get_all_prefix():
-            self.update_query(prefix, new_query)
+            self.update_query(prefix, episodes_query)
         raw_episodes = self.es.search(
             index='episodes',
-            query=new_query,
+            query=episodes_query,
             size=self.max_search_size
         )
         raw_episodes = raw_episodes['hits']['hits']
