@@ -2,10 +2,13 @@ import argparse
 import os
 import json
 import csv
-from timeit import default_timer as timer
+import sys
 
 from elasticsearch import Elasticsearch
+from PyQt6.QtWidgets import QApplication
+
 from es_client import ESClient
+from GUI import MyWidget
 
 META_PATH = r"G:\podcasts-no-audio-13GB\metadata.tsv"
 TRANS_ROOT = r"G:\podcasts-no-audio-13GB\podcasts-transcripts"
@@ -104,16 +107,20 @@ if __name__ == "__main__":
         # create index named 'transcripts' according to mappings
         es.create_index(index_name='transcripts', mappings=configurations['tr_mappings'])
         print("Indexing transcripts...")
+<<<<<<< HEAD
         es.index_trans(TRANS_ROOT)  # Index transcripts
+=======
+        es.index_trans(TRANS_ROOT)   # Index transcripts
+
+>>>>>>> origin
 
     ######################
     # Execute search query
     ######################
     if args.mode == 'search':
-        # TODO 这里应该是写一个searcher的类，封装UI和search功能
-        search_query['match']['description'] = args.query
-        search_results = es.es_client.search(index="episodes", query=search_query)
+        app = QApplication(sys.argv)
 
-        print(search_results['hits']['total']['value'])  # total number of hits returned
-        print(search_results['took'])  # time taken to execute the search query
-        print(search_results['hits']['hits'])  # the actual search results
+        search_engine = None  # TODO 这里要创建SeacherEngine对象
+        w = MyWidget(search_engine)
+        sys.exit(app.exec())
+
