@@ -45,3 +45,6 @@ class Transcript():
 
     def add_score(self, new_score: float) -> None:
         self.score += new_score
+        
+    def __str__(self) -> str:
+        return self.transcript + " | " + str(self.total_time) + " | " + str(self.score)

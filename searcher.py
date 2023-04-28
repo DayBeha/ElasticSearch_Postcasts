@@ -190,6 +190,11 @@ def main():
     es_client = Elasticsearch("http://localhost:9200")
     searcher = Searcher(es_client)
     res = searcher.search(QUERY)
+    for i, item in enumerate(res):
+        print(i)
+        print(item[0].get_episode_filename_prefix())
+        for trans in item:
+            print(trans)
     print('search finish')
 
 
