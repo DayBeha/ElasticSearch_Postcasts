@@ -37,7 +37,7 @@ class MyWidget(QWidget):
         self.label2.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
         # 创建单行输入框并设置回车键响应, 接收时间限制
         self.input_box_time = QLineEdit(self)
-        self.input_box_time.returnPressed.connect(self.get_time_limit)
+        self.input_box_time.editingFinished.connect(self.get_time_limit)
         self.input_box_time.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
         self.layout2.addWidget(self.label2)
         self.layout2.addWidget(self.input_box_time)

@@ -175,41 +175,55 @@ class Searcher:
         """对最终结果的每一个transcript，构造出n-minutes的片段"""
         # 搜索每一个transcript前后的部分，凑够n-minutes
         res = []
-        total_sec = 60 * self.time_limit
+        total_sec = 60 * (self.time_limit - 0.5)
 
         for trans in modified_transcripts:
-            combine_query = {
-                "bool": {
-                    "must": [
-                        {"match": {"episode_filename_prefix": trans.get_episode_filename_prefix()}},
-                        {
-                            "range": {
-                                "id": {
-                                    "gte": max(0, trans.get_id() - self.half_cache_number),
-                                    "lte": trans.get_id() + self.half_cache_number
+            flag = False
+            n = 1  # 控制搜索范围
+            old_cache = []
+            while not flag:
+                gte = max(0, trans.get_id() - n * self.half_cache_number)
+                lte = trans.get_id() + n * self.half_cache_number
+                combine_query = {
+                    "bool": {
+                        "must": [
+                            {"match": {"episode_filename_prefix": trans.get_episode_filename_prefix()}},
+                            {
+                                "range": {
+                                    "id": {
+                                        "gte": gte,
+                                        "lte": lte
+                                    }
                                 }
                             }
-                        }
-                    ]
+                        ]
+                    }
                 }
-            }
-            combine_cache = self.es.search(
-                index='transcripts',
-                query=combine_query,
-                size=2 * self.half_cache_number + 1
-            )
-            combine_cache = combine_cache['hits']['hits']
-            combine_cache = [Transcript(json_obj=hit) for hit in combine_cache]
-            # 向前向后搜索并添加
-            # TODO: 暂时没有实现缓存不够重读的功能，因此，有必要将self.half_cache_number设置的比较大
-            deque = collections.deque()  # 双端队列
-            res_list = self.front_back_search(deque, trans, combine_cache, total_sec)
-            clip = Clip(list(res_list), trans.get_score(), show_info[trans.get_episode_filename_prefix()])
-            res.append(clip)
+                combine_cache = self.es.search(
+                    index='transcripts',
+                    query=combine_query,
+                    size=2 * self.half_cache_number + 1
+                )
+                combine_cache = combine_cache['hits']['hits']
+                combine_cache = [Transcript(json_obj=hit) for hit in combine_cache]
+                # 向前向后搜索并添加
+                # 实现了缓存不够重读的功能
+                deque = collections.deque()  # 双端队列
+                res_list, flag = self.front_back_search(deque, trans, combine_cache, total_sec)
+
+                if not flag:  # 搜索完成后，最终clip的时长小于目标要求的时长
+                    n += 1
+                    if len(old_cache) == len(combine_cache):  # 说明不够的原因是没有更多文本，直接退出
+                        break
+                    old_cache = combine_cache
+                    continue
+
+                clip = Clip(list(res_list), trans.get_score(), show_info[trans.get_episode_filename_prefix()])
+                res.append(clip)
 
         return res
 
-    def front_back_search(self, deque, trans, combine_cache, total_sec) -> collections.deque:
+    def front_back_search(self, deque, trans, combine_cache, total_sec):
         """为某一个transcript构造n-minutes片段"""
         trans_cp = copy.deepcopy(trans)
         trans_cp.set_transcript('<' + trans_cp.get_transcript() + '>')
@@ -231,7 +245,11 @@ class Searcher:
                 cur_sec += back_trans.get_total_time()
 
             i += 1
-        return deque
+
+        if i == self.half_cache_number and cur_sec < total_sec:
+            return deque, False
+        else:
+            return deque, True
 
 
 def main():
