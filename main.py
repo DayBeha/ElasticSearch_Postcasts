@@ -74,7 +74,6 @@ search_query = {
 def getargs():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--mode', type=str, default='index', help='index or search')
-    parser.add_argument('-q', '--query', type=str, default='second', help='query')
     args = parser.parse_args()
     return args
 
