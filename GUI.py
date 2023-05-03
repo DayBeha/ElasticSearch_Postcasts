@@ -30,6 +30,19 @@ class MyWidget(QWidget):
 
         ############
         ## 搜索设置
+        self.layout2 = QVBoxLayout()
+        # 显示文本
+        self.label2 = QLabel(self)
+        self.label2.setText("Time Limit:")
+        self.label2.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
+        # 创建单行输入框并设置回车键响应, 接收时间限制
+        self.input_box_time = QLineEdit(self)
+        self.input_box_time.returnPressed.connect(self.get_time_limit)
+        self.input_box_time.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
+        self.layout2.addWidget(self.label2)
+        self.layout2.addWidget(self.input_box_time)
+        
+        
         self.layout1 = QVBoxLayout()
         # 显示文本
         self.label = QLabel(self)
@@ -42,22 +55,12 @@ class MyWidget(QWidget):
         self.layout1.addWidget(self.label)
         self.layout1.addWidget(self.input_box_query)
 
-        self.layout2 = QVBoxLayout()
-        # 显示文本
-        self.label2 = QLabel(self)
-        self.label2.setText("Time Limit:")
-        self.label2.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
-        # 创建单行输入框并设置回车键响应, 接收时间限制
-        self.input_box_time = QLineEdit(self)
-        self.input_box_time.returnPressed.connect(self.get_time_limit)
-        self.input_box_time.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
-        self.layout2.addWidget(self.label2)
-        self.layout2.addWidget(self.input_box_time)
 
         # 创建水平布局，将两个垂直布局放入其中
         self.layout_H = QHBoxLayout()
-        self.layout_H.addLayout(self.layout1)
         self.layout_H.addLayout(self.layout2)
+        self.layout_H.addLayout(self.layout1)
+
 
         ############
         ## 搜索结果
@@ -72,6 +75,7 @@ class MyWidget(QWidget):
         self.list_widget.setObjectName("listWidget_docs")
         self.list_widget.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
         self.list_widget.itemDoubleClicked.connect(self.on_item_double_clicked) # 设置双击项目时触发的槽函数
+        self.list_widget.itemClicked.connect(self.on_item_clicked) # 设置鼠标进入项目时触发的槽函数
         self.layout.addWidget(self.label3)
         self.layout.addWidget(self.list_widget)
 
@@ -115,17 +119,16 @@ class MyWidget(QWidget):
         # self.statusBar().setStyleSheet("QStatusBar {color: black;}")
         self.label5.setStyleSheet("color: black")
 
-    def get_time_limit(self):   # TODO 还没有放到搜索引擎中
+    def get_time_limit(self):
         """获取用户输入的时间限制 """
         self.reset()
         input_text = self.input_box_time.text()
         try:
             integer_value = float(input_text)
             print(f"用户输入了: {integer_value}")
-            if integer_value > 5:   # 设置最大时间限制为5min  TODO 阈值有待推敲
+            if integer_value > 5:   # 设置最大时间限制为5min
                 integer_value = 5
-            # TODO 将时间限制传入搜索引擎
-
+            self.search_engine.set_time_limit(integer_value)
             self.label5.setText(f"set time limit:{integer_value} min")   # 状态栏（左下角）
             return integer_value
         except ValueError:
@@ -140,13 +143,33 @@ class MyWidget(QWidget):
         """
         input_text = self.input_box_query.text()
         # print(f"用户输入了: {input_text}")
-        words = input_text.split()
+        # words = input_text.split()
+        # query = {
+        #         "bool": {
+        #             "should": [{"match": {"transcript": f"{word}"}} for word in words],
+        #             }
+        #         }
         query = {
-                "bool": {
-                    "should": [{"match": {"transcript": f"{word}"}} for word in words],
+                    "bool": {
+                        "must": {
+                            "match": {
+                                "transcript": {
+                                    "query": input_text,
+                                    "minimum_should_match": "50%"
+                                }
+                            }
+                        },
+                        "should": {
+                            "match_phrase": {
+                                "transcript": {
+                                    "query": input_text,
+                                    "slop": 20
+                                }
+                            }
+                        }
                     }
                 }
-        return query
+        return query, input_text
 
 
     def show_result(self):
@@ -155,8 +178,12 @@ class MyWidget(QWidget):
         :param doc_list: 搜索结果列表
         """
         self.list_widget.clear()
-        for i, item in enumerate(self.doc_list):
-            str = f"{i+1}. {item[0].get_episode_filename_prefix()}"
+        for i, clip in enumerate(self.doc_list):
+            str = f"{i+1}. " + clip.show_info.get('show_filename_prefix') 
+            str += " (" + " ".join(clip.text.split()[:3]) + "...)"
+            str += f":  {clip.score:.5f}"
+
+                
             # for trans in item:
             #     str += trans.to_str()
             self.list_widget.addItem(str)
@@ -167,12 +194,12 @@ class MyWidget(QWidget):
         """
         self.reset()
         """获取输入文本"""
-        query = self.get_input()
+        query, input_text = self.get_input()
 
         """进行搜索"""
         self.label5.setText('Searching...')   # 状态栏（左下角）
         t0 = timer()
-        self.doc_list = self.search_engine.search(query)
+        self.doc_list = self.search_engine.search(query, input_text)
         self.label5.setText('Search Finished')   # 状态栏（左下角）
         t1 = timer()
 
@@ -183,15 +210,20 @@ class MyWidget(QWidget):
     # 设置双击项目时触发的槽函数
     def on_item_double_clicked(self, item):
         index = self.list_widget.row(item)
-        text = ""
-        for trans in self.doc_list[index]:
-            text += trans.to_str()
+        # text = ""
+        # for trans in self.doc_list[index]:
+        #     text += trans.to_str()
+        text = self.doc_list[index].text
 
         # 在文本框中显示详细内容
         # text = item.text()
         # text = self.search_engine.get_trans(text, self.min_limit)   # TODO 获取对应的transcript 片段
         self.text_box.setText(text)
 
+    def on_item_clicked(self, item):
+        index = self.list_widget.row(item)
+        text = self.doc_list[index].show_info.get('episode_name')   # 显示 episode_name
+        item.setToolTip(text)
 
 
 if __name__ == '__main__':

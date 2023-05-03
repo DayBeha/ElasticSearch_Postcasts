@@ -25,7 +25,10 @@ class Transcript():
     def get_id(self) -> int:
         return self.id
 
-    def get_transcript(self) -> int:
+    def set_transcript(self, new_transcript):
+        self.transcript = new_transcript
+
+    def get_transcript(self) -> str:
         return self.transcript
 
     def get_episode_filename_prefix(self) -> int:

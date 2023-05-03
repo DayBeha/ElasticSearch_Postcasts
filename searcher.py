@@ -1,27 +1,44 @@
 import collections
+import copy
 from elasticsearch import Elasticsearch
+from clip import Clip
 from transcript import Transcript
 from transcript_dict import TranscriptDict
-
-# QUERY = {
-#     "bool": {
-#         "should": [
-#             {"match": {"transcript": "Higgs"}},
-#             {"match": {"transcript": "Boson"}},
-#         ],
-#     }
-# }
 
 QUERY = {
     "bool": {
         "should": [
-            {"match": {"transcript": "terrorism"}},
+            {"match": {"transcript": "Higgs"}},
+            {"match": {"transcript": "Boson"}},
         ],
     }
 }
 
+QUERY_TEXT = 'Higgs Boson'
 
-# QUERY2 = {
+QUERY_COMPLEX = {
+    "bool": {
+        "must": {
+            "match": {
+                "transcript": {
+                    "query": "Higgs Boson",
+                    "minimum_should_match": "50%"
+                }
+            }
+        },
+        "should": {
+            "match_phrase": {
+                "transcript": {
+                    "query": "Higgs Boson",
+                    "slop": 20
+                }
+            }
+        }
+    }
+}
+
+
+# EPISODE_QUERY = {
 #     "bool": {
 #         "should": [
 #             {"match": {"episode_description": "Higgs"}},
@@ -41,12 +58,12 @@ QUERY = {
 
 
 class Searcher:
-    def __init__(self, es: Elasticsearch, n_minute=2, size=100):
+    def __init__(self, es: Elasticsearch, time_limit=2, size=100):
         # Elasticsearch
         self.es = es
         self.transcript_dict = None
         # 由用户输入的，需要返回的n-minutes片段
-        self.n_minute = n_minute
+        self.time_limit = time_limit
         # 第1次对transcripts进行搜索的结果数目
         self.raw_search_size = 100
         # 第2次对episodes进行搜索的结果数目
@@ -58,7 +75,10 @@ class Searcher:
         # TODO: 找到最好的权重
         self.EPISODE_WEIGHT = 1.5
 
-    def search(self, query: dict) -> list:
+    def set_time_limit(self, time_limit):
+        self.time_limit = time_limit
+
+    def search(self, query: dict, query_text: str) -> list:
         # search raw transcripts
         raw_transcripts = self.es.search(
             index='transcripts',
@@ -69,9 +89,21 @@ class Searcher:
         self.update_transcript_dict(raw_transcripts)
 
         # search in episodes
-        episodes_query = QUERY.copy()
+        episodes_query = {
+            "bool": {
+                "should": [
+                    {"match": {"episode_description": query_text}},
+                ],
+                "filter": {
+                    "bool": {
+                        "should":
+                            []
+                    }
+                }
+            }
+        }
         for prefix in self.transcript_dict.get_all_prefix():
-            self.update_query(prefix, episodes_query)
+            self.update_query(prefix, episodes_query, query_text)
         raw_episodes = self.es.search(
             index='episodes',
             query=episodes_query,
@@ -80,10 +112,29 @@ class Searcher:
         raw_episodes = raw_episodes['hits']['hits']
         episodes_score = [hit for hit in raw_episodes if hit["_score"] > 0]
 
+        # 根据raw_episodes构造prefix_id与show_name, episode_name的对应关系
+        show_info = self.build_show_info(raw_episodes)
+
         self.modify_score(episodes_score)  # 此时，self.transcript_dict中存的是修改分数后的结果
         modified_transcripts = self.transcript_dict.get_sorted_results()  # 对结果按score进行重新排序
-        res = self.combine_clips(modified_transcripts)
+        res = self.combine_clips(modified_transcripts, show_info)
         return res
+
+    @staticmethod
+    def build_show_info(raw_episodes):
+        show_info = {}
+        for raw in raw_episodes:
+            raw = raw['_source']
+            show_info[raw['episode_filename_prefix']] = {
+                'show_filename_prefix': raw['show_filename_prefix'],
+                'episode_filename_prefix': raw['episode_filename_prefix'],
+                'show_name': raw['show_name'],
+                'show_description': raw['show_description'],
+                'publisher': raw['publisher'],
+                'episode_name': raw['episode_name'],
+                'episode_description': raw['episode_description'],
+            }
+        return show_info
 
     def modify_score(self, episodes_score):
         """将每段transcript的原始得分与其对应的episodes的得分进行加权"""
@@ -94,20 +145,21 @@ class Searcher:
             prefix = episodes_json['_source']['episode_filename_prefix']
             ep_score = episodes_json['_score']
             for transcript in self.transcript_dict.transcript_dict[prefix]:
-                transcript.add_score(ep_score, self.EPISODE_WEIGHT)  
+                transcript.add_score(ep_score, self.EPISODE_WEIGHT)
 
     @staticmethod
-    def update_query(prefix, query):
+    def update_query(prefix, query, query_text):
         """根据用户提供的原始query，构造在episodes上进行查询时的query"""
-        if "episode_description" not in QUERY["bool"]["should"][0]["match"]:
-            # modify match name
-            for t in QUERY["bool"]["should"]:
-                t["match"]["episode_description"] = t["match"].pop("transcript")
+        # if "episode_description" not in query["bool"]["should"][0]["match"]:
+        #     # modify match name
+        #     for t in query["bool"]["should"]:
+        #         t["match"]["episode_description"] = t["match"].pop("transcript")
+
         # add filter
         entry = {"term": {"episode_filename_prefix": prefix}}
 
-        if "filter" not in query["bool"].keys():
-            query["bool"]["filter"] = {"bool": {"should": []}}
+        # if "filter" not in query["bool"].keys():
+        #     query["bool"]["filter"] = {"bool": {"should": []}}
 
         query["bool"]["filter"]["bool"]["should"].append(entry)
 
@@ -119,11 +171,11 @@ class Searcher:
             trans_obj = Transcript(json_obj=trans_json)
             self.transcript_dict.add_new_list_simple(transcript=trans_obj)
 
-    def combine_clips(self, modified_transcripts) -> list:
+    def combine_clips(self, modified_transcripts, show_info) -> list:
         """对最终结果的每一个transcript，构造出n-minutes的片段"""
-        # TODO: 搜索每一个transcript前后的部分，凑够n-minutes
+        # 搜索每一个transcript前后的部分，凑够n-minutes
         res = []
-        total_sec = 60 * self.n_minute
+        total_sec = 60 * self.time_limit
 
         for trans in modified_transcripts:
             combine_query = {
@@ -149,18 +201,21 @@ class Searcher:
             combine_cache = combine_cache['hits']['hits']
             combine_cache = [Transcript(json_obj=hit) for hit in combine_cache]
             # 向前向后搜索并添加
-            # 注意：暂时没有实现缓存不够重读的功能，因此，有必要将self.half_cache_number设置的比较大
+            # TODO: 暂时没有实现缓存不够重读的功能，因此，有必要将self.half_cache_number设置的比较大
             deque = collections.deque()  # 双端队列
             res_list = self.front_back_search(deque, trans, combine_cache, total_sec)
-            res.append(res_list)
+            clip = Clip(list(res_list), trans.get_score(), show_info[trans.get_episode_filename_prefix()])
+            res.append(clip)
 
         return res
 
     def front_back_search(self, deque, trans, combine_cache, total_sec) -> collections.deque:
         """为某一个transcript构造n-minutes片段"""
-        deque.append(trans)
-        cur_sec = trans.get_total_time()
-        base_pos = trans.get_id() - combine_cache[0].get_id()
+        trans_cp = copy.deepcopy(trans)
+        trans_cp.set_transcript('<' + trans_cp.get_transcript() + '>')
+        deque.append(trans_cp)
+        cur_sec = trans_cp.get_total_time()
+        base_pos = trans_cp.get_id() - combine_cache[0].get_id()
         i = 1
         while cur_sec <= total_sec and i <= self.half_cache_number:
             if base_pos - i >= 0:
@@ -182,7 +237,10 @@ class Searcher:
 def main():
     es_client = Elasticsearch("http://localhost:9200")
     searcher = Searcher(es_client)
-    res = searcher.search(QUERY)
+    res = searcher.search(QUERY, QUERY_TEXT)
+    for clip in res:
+        a = clip.text
+
     for i, item in enumerate(res):
         print(i)
         print(item[0].get_episode_filename_prefix())
