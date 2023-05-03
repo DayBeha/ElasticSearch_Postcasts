@@ -10,10 +10,13 @@ from PyQt6.QtWidgets import QApplication
 from es_client import ESClient
 from GUI import MyWidget
 from searcher import Searcher
+import yaml
 
-
-META_PATH = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\spotify-podcasts-2020\metadata.tsv"
-TRANS_ROOT = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\spotify-podcasts-2020\podcasts-transcripts"
+yaml_path = './config.yaml'
+with open(yaml_path, 'rb') as f:
+    yaml_dict = list(yaml.safe_load_all(f))[0]
+    META_PATH = yaml_dict["meta_path"]
+    TRANS_ROOT = yaml_dict["trans_root"]
 
 # Define mapping
 configurations = {
