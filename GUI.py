@@ -1,17 +1,19 @@
 import sys
 # from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QToolTip, QMessageBox
 from PyQt6.QtWidgets import *
-from PyQt6.QtGui import QFont, QPalette, QColor
+from PyQt6.QtGui import QFont, QPalette, QColor, QIcon
 from timeit import default_timer as timer
 
 
-class MyWidget(QMainWindow):
+class MyWidget(QWidget):
     def __init__(self, search_engine):
         super().__init__()
         self.search_engine = search_engine
         self.initUI()
         self.center()  # 调用center方法
         self.show()
+
+        self.doc_list = []
 
     def center(self):
         # 获取窗口的矩形
@@ -24,61 +26,80 @@ class MyWidget(QMainWindow):
 
     def initUI(self):
         # QToolTip.setFont(QFont('SansSerif', 10))
+        # self.setToolTip('This is a <b>QWidget</b> widget')
 
-        self.setToolTip('This is a <b>QWidget</b> widget')
-
-        # btn = QPushButton('Button', self)
-        # # btn.setToolTip('This is a <b>QPushButton</b> widget')
-        # btn.setStatusTip('This is a <b>QPushButton</b> widget')
-        # btn.clicked.connect(QApplication.instance().quit)   # quit the application
-        # btn.resize(btn.sizeHint())
-        # btn.move(50, 50)
-
+        ############
+        ## 搜索设置
+        self.layout1 = QVBoxLayout()
         # 显示文本
         self.label = QLabel(self)
         self.label.setText("Query:")
-        self.label.setGeometry(5, 5, 50, 10)
         self.label.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
-
-        self.label2 = QLabel(self)
-        self.label2.setText("Time Limit:")
-        self.label2.setGeometry(520, 5, 80, 10)
-        self.label2.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
-
-
-        height = 20
         # 创建单行输入框并设置回车键响应，接收查询语句
         self.input_box_query = QLineEdit(self)
         self.input_box_query.returnPressed.connect(self.process_input)
-        self.input_box_query.setGeometry(5, height, 500, 50)
         self.input_box_query.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
+        self.layout1.addWidget(self.label)
+        self.layout1.addWidget(self.input_box_query)
+
+        self.layout2 = QVBoxLayout()
+        # 显示文本
+        self.label2 = QLabel(self)
+        self.label2.setText("Time Limit:")
+        self.label2.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
         # 创建单行输入框并设置回车键响应, 接收时间限制
         self.input_box_time = QLineEdit(self)
         self.input_box_time.returnPressed.connect(self.get_time_limit)
-        self.input_box_time.setGeometry(520, height, 75, 50)
         self.input_box_time.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
+        self.layout2.addWidget(self.label2)
+        self.layout2.addWidget(self.input_box_time)
 
-        height += 60
+        # 创建水平布局，将两个垂直布局放入其中
+        self.layout_H = QHBoxLayout()
+        self.layout_H.addLayout(self.layout1)
+        self.layout_H.addLayout(self.layout2)
+
+        ############
+        ## 搜索结果
+        self.layout = QVBoxLayout()
+        self.layout.addLayout(self.layout_H)
+        # 显示文本
+        self.label3 = QLabel(self)
+        self.label3.setText("Results:")
+        self.label3.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
         # 创建列表部件，用以显示搜索结果
         self.list_widget = QListWidget(self)
-        self.list_widget.setGeometry(0, height, 600, 300)
         self.list_widget.setObjectName("listWidget_docs")
         self.list_widget.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
         self.list_widget.itemDoubleClicked.connect(self.on_item_double_clicked) # 设置双击项目时触发的槽函数
+        self.layout.addWidget(self.label3)
+        self.layout.addWidget(self.list_widget)
 
-        height += 310
+        # 显示文本
+        self.label4 = QLabel(self)
+        self.label4.setText("Content:")
+        self.label4.setFont(QFont('Time', 10, QFont.Weight.Bold))    # 设置字体字号
         # 创建文本框，显示更详细内容
         self.text_box = QTextEdit(self)
-        self.text_box.setGeometry(0, height, 600, 200)
         self.text_box.setObjectName("textEdit")
         self.text_box.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
+        self.text_box.setReadOnly(True) # 设置为只读
+        self.layout.addWidget(self.label4)
+        self.layout.addWidget(self.text_box)
 
+        # 状态栏
+        self.label5 = QLabel(self)
+        self.label5.setText("Ready") # 当状态栏用（左下角）
+        self.label5.setFont(QFont("KaiTi", 10, QFont.Weight.Normal))    # 设置字体字号
 
+        self.layout.addWidget(self.label5)
+        self.layout.addWidget(self.label5)
+        # 设置中央窗口部件的布局管理器
+        self.setLayout(self.layout)
 
-        self.statusBar().showMessage('Ready')   # 状态栏（左下角）
-        height += 210
-        self.setGeometry(300, height, 600, height+10) # x, y, width, height
+        self.setGeometry(300, 600, 600, 700) # x, y, width, height
         self.setWindowTitle('Search Engine')
+        self.setWindowIcon(QIcon('icon.png'))
 
 
     # def closeEvent(self, event):
@@ -91,49 +112,53 @@ class MyWidget(QMainWindow):
     def reset(self):
         self.list_widget.clear()
         self.text_box.clear()
-        self.statusBar().setStyleSheet("QStatusBar {color: black;}")
+        # self.statusBar().setStyleSheet("QStatusBar {color: black;}")
+        self.label5.setStyleSheet("color: black")
 
-    def get_time_limit(self):
+    def get_time_limit(self):   # TODO 还没有放到搜索引擎中
         """获取用户输入的时间限制 """
+        self.reset()
         input_text = self.input_box_time.text()
         try:
             integer_value = float(input_text)
             print(f"用户输入了: {integer_value}")
             if integer_value > 5:   # 设置最大时间限制为5min  TODO 阈值有待推敲
                 integer_value = 5
-            self.statusBar().showMessage(f"set time limit:{integer_value} min")   # 状态栏（左下角）
+            # TODO 将时间限制传入搜索引擎
+
+            self.label5.setText(f"set time limit:{integer_value} min")   # 状态栏（左下角）
             return integer_value
         except ValueError:
-            self.statusBar().showMessage('Error! Please input valid number!')   # 状态栏（左下角）
-            self.statusBar().setStyleSheet("QStatusBar {color: red;}")
-
+            self.label5.setText('Error! Please input valid number!')   # 状态栏（左下角）
+            # self.statusBar().setStyleSheet("QStatusBar {color: red;}")
+            # 设置self.label5的字体颜色为红色
+            self.label5.setStyleSheet("color: red")
 
     def get_input(self):
         """
         获取用户输入的文本
         """
         input_text = self.input_box_query.text()
+        # print(f"用户输入了: {input_text}")
         words = input_text.split()
         query = {
                 "bool": {
                     "should": [{"match": {"transcript": f"{word}"}} for word in words],
                     }
                 }
-
-        # print(f"用户输入了: {input_text}")
         return query
 
 
-    def show_result(self, doc_list):
+    def show_result(self):
         """
         搜索结果显示到list_view上
         :param doc_list: 搜索结果列表
         """
         self.list_widget.clear()
-        for i, item in enumerate(doc_list):
+        for i, item in enumerate(self.doc_list):
             str = f"{i+1}. {item[0].get_episode_filename_prefix()}"
-            for trans in item:
-                str += trans
+            # for trans in item:
+            #     str += trans.to_str()
             self.list_widget.addItem(str)
 
     def process_input(self):
@@ -145,22 +170,25 @@ class MyWidget(QMainWindow):
         query = self.get_input()
 
         """进行搜索"""
-        self.statusBar().showMessage('Searching...')   # 状态栏（左下角）
+        self.label5.setText('Searching...')   # 状态栏（左下角）
         t0 = timer()
-        # doc_list = ["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8", "doc9", "dco10"]
-        # TODO 这里要调用search_engine的search方法，并将结果保存到doc_list中
-        doc_list = self.search_engine.search(query)
-        self.statusBar().showMessage('Search Finished')   # 状态栏（左下角）
+        self.doc_list = self.search_engine.search(query)
+        self.label5.setText('Search Finished')   # 状态栏（左下角）
         t1 = timer()
 
         """展示搜索结果"""
-        self.show_result(doc_list)
-        self.statusBar().showMessage(f"OK, search use time: {t1-t0} s")   # 状态栏（左下角）
+        self.show_result()
+        self.label5.setText(f"OK, search use time: {t1-t0} s")   # 状态栏（左下角）
 
     # 设置双击项目时触发的槽函数
     def on_item_double_clicked(self, item):
+        index = self.list_widget.row(item)
+        text = ""
+        for trans in self.doc_list[index]:
+            text += trans.to_str()
+
         # 在文本框中显示详细内容
-        text = item.text()
+        # text = item.text()
         # text = self.search_engine.get_trans(text, self.min_limit)   # TODO 获取对应的transcript 片段
         self.text_box.setText(text)
 
@@ -168,7 +196,6 @@ class MyWidget(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-
     search_engine = None    # TODO 这里要创建SeacherEngine对象
     w = MyWidget(search_engine)
     sys.exit(app.exec())

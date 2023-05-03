@@ -11,6 +11,7 @@ from es_client import ESClient
 from GUI import MyWidget
 from searcher import Searcher
 
+
 META_PATH = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\spotify-podcasts-2020\metadata.tsv"
 TRANS_ROOT = r"D:\win\桌面\KTH\courses\DD2477 Search Engines and Information Retrieval Systems (60034)\Project\podcasts-no-audio-13GB\spotify-podcasts-2020\podcasts-transcripts"
 

@@ -43,8 +43,11 @@ class Transcript():
     def set_score(self, new_score: float) -> None:
         self.score = new_score
 
-    def add_score(self, new_score: float) -> None:
-        self.score += new_score
+    def add_score(self, new_score: float, weight: float=1) -> None:
+        self.score += new_score * weight
         
     def __str__(self) -> str:
         return self.transcript + " | " + str(self.total_time) + " | " + str(self.score)
+    
+    def to_str(self) -> str:
+        return self.__str__()
