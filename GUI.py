@@ -72,6 +72,7 @@ class MyWidget(QWidget):
         self.list_widget.setObjectName("listWidget_docs")
         self.list_widget.setFont(QFont('Time', 20, QFont.Weight.Bold))    # 设置字体字号
         self.list_widget.itemDoubleClicked.connect(self.on_item_double_clicked) # 设置双击项目时触发的槽函数
+        self.list_widget.itemClicked.connect(self.on_item_clicked) # 设置鼠标进入项目时触发的槽函数
         self.layout.addWidget(self.label3)
         self.layout.addWidget(self.list_widget)
 
@@ -115,17 +116,16 @@ class MyWidget(QWidget):
         # self.statusBar().setStyleSheet("QStatusBar {color: black;}")
         self.label5.setStyleSheet("color: black")
 
-    def get_time_limit(self):   # TODO 还没有放到搜索引擎中
+    def get_time_limit(self):
         """获取用户输入的时间限制 """
         self.reset()
         input_text = self.input_box_time.text()
         try:
             integer_value = float(input_text)
             print(f"用户输入了: {integer_value}")
-            if integer_value > 5:   # 设置最大时间限制为5min  TODO 阈值有待推敲
+            if integer_value > 5:   # 设置最大时间限制为5min
                 integer_value = 5
-            # TODO 将时间限制传入搜索引擎
-
+            self.search_engine.set_time_limit(integer_value)
             self.label5.setText(f"set time limit:{integer_value} min")   # 状态栏（左下角）
             return integer_value
         except ValueError:
@@ -183,15 +183,20 @@ class MyWidget(QWidget):
     # 设置双击项目时触发的槽函数
     def on_item_double_clicked(self, item):
         index = self.list_widget.row(item)
-        text = ""
-        for trans in self.doc_list[index]:
-            text += trans.to_str()
+        # text = ""
+        # for trans in self.doc_list[index]:
+        #     text += trans.to_str()
+        text = self.doc_list[index].text
 
         # 在文本框中显示详细内容
         # text = item.text()
         # text = self.search_engine.get_trans(text, self.min_limit)   # TODO 获取对应的transcript 片段
         self.text_box.setText(text)
 
+    def on_item_clicked(self, item):
+        index = self.list_widget.row(item)
+        text = self.doc_list[index].show_info.get('episode_name')   # 显示 episode_name
+        item.setToolTip(text)
 
 
 if __name__ == '__main__':
