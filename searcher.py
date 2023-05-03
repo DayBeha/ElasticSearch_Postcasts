@@ -226,7 +226,7 @@ class Searcher:
     def front_back_search(self, deque, trans, combine_cache, total_sec):
         """为某一个transcript构造n-minutes片段"""
         trans_cp = copy.deepcopy(trans)
-        trans_cp.set_transcript('<' + trans_cp.get_transcript() + '>')
+        trans_cp.set_transcript('<i>' + trans_cp.get_transcript() + '</i>')
         deque.append(trans_cp)
         cur_sec = trans_cp.get_total_time()
         base_pos = trans_cp.get_id() - combine_cache[0].get_id()
