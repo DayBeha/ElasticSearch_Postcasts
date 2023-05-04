@@ -223,14 +223,7 @@ class MyWidget(QWidget):
         双击显示transcript
         """
         index = self.list_widget.row(item)
-        # text = ""
-        # for trans in self.doc_list[index]:
-        #     text += trans.to_str()
-        # text = self.doc_list[index].text
-        # 用 QLabel 显示富文本
-        # text_label = QLabel()
         text = self.doc_list[index].text
-        # text_label.setText(text)
 
         # 用 QTextEdit 显示富文本
         text_box = QTextEdit()

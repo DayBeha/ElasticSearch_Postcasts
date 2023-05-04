@@ -28,11 +28,10 @@ This is the group project of DD2477 Search Engines and Information Retrieval Sys
 <img src="./demo.png" alt="demo" width="50%">
 </p>
 
+1. Select search method and input the time limit in the corresponding text box. The status bar in the bottom will show as "set time limit: x min" if time limit is set successfuly.
 
-1. Input the query and time limit in the corresponding text box.
+2. Input the query and hit the `Enter` key. The result box at the middle lists top of the filename of related transcripts form sorted by score from high to low. The status bar will show how much time was consumed during search.
 
-2. Select search method.
+4. Click on an item, and left your cursor on that. There will be a float window that shows the episode_name of that item.
 
-3. Hit the Enter key.
-
-4. Click on an item, and the transcript text will be displayed in the text box at the bottom.
+5. Double click on an item and the transcript text will be displayed in the text box at the bottom.
